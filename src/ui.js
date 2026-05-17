@@ -235,7 +235,7 @@ downloadBtn.addEventListener('click', () => {
   const url = URL.createObjectURL(lastGifBlob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `bitmill_${lastSeed}.gif`;
+  a.download = `ilovepurechaos_${lastSeed}.gif`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
