@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BITMILL / glitch art machine</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="machine">
+    <header>
+      <h1>BITMILL</h1>
+      <div class="version">v0.4</div>
+    </header>
+
+    <main>
+      <div class="main-grid">
+        <div class="main-left">
+          <div class="display" id="display">
+            <canvas id="preview" width="512" height="512"></canvas>
+            <div id="emptyState" class="empty">DROP OR SELECT AN IMAGE</div>
+          </div>
+
+          <div class="controls">
+            <input type="file" id="upload" accept="image/*" hidden>
+            <button id="uploadBtn" class="btn">SELECT</button>
+            <button id="generateBtn" class="btn" disabled>GENERATE</button>
+            <button id="downloadBtn" class="btn" disabled>DOWNLOAD</button>
+          </div>
+
+          <div class="status">
+            <div id="statusLine">READY</div>
+            <div id="progressBar"><div id="progressFill"></div></div>
+          </div>
+
+          <div class="recipe">
+            <div class="label">LAST GENERATION</div>
+            <div id="recipeText">none</div>
+          </div>
+        </div>
+
+        <aside class="operators">
+          <div class="operators-header">
+            <span class="operators-label">OPERATORS</span>
+            <span id="opCount" class="op-count">18/18</span>
+          </div>
+          <div class="operators-list">
+            <button class="op-btn active" data-op="pixel-sort">pixel-sort</button>
+            <button class="op-btn active" data-op="channel-shift">channel-shift</button>
+            <button class="op-btn active" data-op="bit-crush">bit-crush</button>
+            <button class="op-btn active" data-op="slit-scan">slit-scan</button>
+            <button class="op-btn active" data-op="jpeg-bomb">jpeg-bomb</button>
+            <button class="op-btn active" data-op="block-shuffle">block-shuffle</button>
+            <button class="op-btn active" data-op="scan-lines">scan-lines</button>
+            <button class="op-btn active" data-op="displacement">displacement</button>
+            <button class="op-btn active" data-op="echo">echo</button>
+            <button class="op-btn active" data-op="kaleidoscope">kaleidoscope</button>
+            <button class="op-btn active" data-op="noise">noise</button>
+            <button class="op-btn active" data-op="pixelate">pixelate</button>
+            <button class="op-btn active" data-op="hue-rotate">hue-rotate</button>
+            <button class="op-btn active" data-op="vhs-tracking">vhs-tracking</button>
+            <button class="op-btn active" data-op="sub-region">sub-region</button>
+            <button class="op-btn active" data-op="halftone">halftone</button>
+            <button class="op-btn active" data-op="barrel">barrel</button>
+            <button class="op-btn active" data-op="edge-outline">edge-outline</button>
+          </div>
+          <div class="operators-hint">click to toggle</div>
+
+          <div class="intensities" id="intensitiesPanel" hidden>
+            <div class="intensities-label">INTENSITY (last gen)</div>
+            <div class="intensities-list" id="intensitiesList"></div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <footer>
+      <div>BITMILL v0.4 / browser / 18 operators / seeded / loop / intensity</div>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
+  <script type="module" src="src/ui.js"></script>
+</body>
+</html>
