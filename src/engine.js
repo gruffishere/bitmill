@@ -10,6 +10,7 @@ export async function generate(sourceImage, options = {}) {
     fps = 15,
     seed = randomSeed(),
     enabledOperators = null,
+    operatorIntensities = null,
     onFrame = () => {},
     onStatus = () => {},
     onEncodeProgress = () => {},
@@ -32,12 +33,17 @@ export async function generate(sourceImage, options = {}) {
     [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
   }
 
-  const selected = ordered.map((op) => ({
-    name: op.name,
-    apply: op.apply,
-    params: op.randomParams(rng),
-    intensity: rng(),
-  }));
+  const selected = ordered.map((op) => {
+    const params = op.randomParams(rng);
+    const randIntensity = rng();
+    const manual = operatorIntensities ? operatorIntensities[op.name] : undefined;
+    return {
+      name: op.name,
+      apply: op.apply,
+      params,
+      intensity: typeof manual === 'number' ? manual : randIntensity,
+    };
+  });
 
   let sourceFrames;
   if (Array.isArray(sourceImage)) {
