@@ -132,6 +132,29 @@ h1 {
   cursor: not-allowed;
 }
 
+.seed-input input {
+  width: 100%;
+  background: #0c0c0c;
+  color: #e0e0e0;
+  border: 1px solid #1f1f1f;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 1px;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.1s;
+}
+
+.seed-input input::placeholder {
+  color: #444;
+  letter-spacing: 1.5px;
+}
+
+.seed-input input:focus {
+  outline: none;
+  border-color: #555;
+}
+
 .status {
   border: 1px solid #1f1f1f;
   padding: 10px;

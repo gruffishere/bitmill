@@ -25,6 +25,7 @@ const opButtons = document.querySelectorAll('.op-btn');
 const opCountEl = document.getElementById('opCount');
 const intensitiesPanel = document.getElementById('intensitiesPanel');
 const intensitiesList = document.getElementById('intensitiesList');
+const seedInput = document.getElementById('seedInput');
 
 let sourceImage = null;
 let lastGifBlob = null;
@@ -140,7 +141,9 @@ generateBtn.addEventListener('click', async () => {
   uploadBtn.disabled = true;
   setOpsProcessing(true);
 
-  const seed = randomSeed();
+  const inputVal = seedInput.value.trim();
+  const parsed = inputVal === '' ? NaN : Number(inputVal);
+  const seed = Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : randomSeed();
   const t0 = performance.now();
 
   try {
@@ -219,11 +222,12 @@ function renderIntensities(ops) {
 recipeText.addEventListener('click', async (e) => {
   const target = e.target;
   if (target && target.classList && target.classList.contains('seed-copy')) {
+    seedInput.value = String(lastSeed);
     try {
       await navigator.clipboard.writeText(String(lastSeed));
       const original = target.textContent;
-      target.textContent = `seed: ${lastSeed} (copied)`;
-      setTimeout(() => { target.textContent = original; }, 1500);
+      target.textContent = `seed: ${lastSeed} (copied + loaded)`;
+      setTimeout(() => { target.textContent = original; }, 1800);
     } catch (err) {
       console.warn('Clipboard write failed', err);
     }
