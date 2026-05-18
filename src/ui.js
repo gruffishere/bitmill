@@ -1,6 +1,7 @@
 import { generate } from './engine.js';
 import { randomSeed } from './rng.js';
 import { startPlayback, stopPlayback } from './playback.js';
+import { parseGIF, decompressFrames } from 'https://esm.sh/gifuct-js@2.1.2';
 
 const ALL_OPS = [
   'pixel-sort', 'channel-shift', 'bit-crush', 'slit-scan',
@@ -100,7 +101,7 @@ async function loadImage(file) {
   generateBtn.disabled = true;
   downloadBtn.disabled = true;
 
-  if (file.type === 'image/gif' && window.gifuct) {
+  if (file.type === 'image/gif') {
     statusLine.textContent = 'PARSING ANIMATED GIF...';
     progressFill.style.width = '0%';
     try {
@@ -146,8 +147,8 @@ async function loadStaticImage(file) {
 
 async function parseAnimatedGif(file) {
   const buffer = await file.arrayBuffer();
-  const gif = window.gifuct.parseGIF(buffer);
-  const rawFrames = window.gifuct.decompressFrames(gif, true);
+  const gif = parseGIF(buffer);
+  const rawFrames = decompressFrames(gif, true);
   if (rawFrames.length === 0) return null;
 
   const fullCanvas = document.createElement('canvas');
