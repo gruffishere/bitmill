@@ -39,16 +39,28 @@ export async function generate(sourceImage, options = {}) {
     intensity: rng(),
   }));
 
-  const base = drawCoverCrop(sourceImage, width, height);
-  const beforeBuffer = new Uint8ClampedArray(width * height * 4);
+  let sourceFrames;
+  if (Array.isArray(sourceImage)) {
+    sourceFrames = sourceImage;
+  } else {
+    sourceFrames = [drawCoverCropToCanvas(sourceImage, width, height)];
+  }
 
+  const beforeBuffer = new Uint8ClampedArray(width * height * 4);
   const frames = [];
+
   for (let f = 0; f < frameCount; f++) {
     const t = frameCount === 1 ? 0.5 : f / (frameCount - 1);
     onStatus(`FRAME ${String(f + 1).padStart(2, '0')}/${frameCount}`);
 
+    const srcIdx = sourceFrames.length === 1
+      ? 0
+      : Math.min(sourceFrames.length - 1, Math.floor(t * sourceFrames.length));
+    const baseCanvas = sourceFrames[srcIdx];
+    const baseData = baseCanvas.getContext('2d').getImageData(0, 0, width, height);
+
     let imageData = new ImageData(
-      new Uint8ClampedArray(base.data),
+      new Uint8ClampedArray(baseData.data),
       width,
       height,
     );
@@ -101,7 +113,7 @@ function blendInPlace(after, before, intensity) {
   }
 }
 
-function drawCoverCrop(image, w, h) {
+function drawCoverCropToCanvas(image, w, h) {
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
@@ -116,5 +128,5 @@ function drawCoverCrop(image, w, h) {
   const dx = (w - dw) / 2;
   const dy = (h - dh) / 2;
   ctx.drawImage(image, dx, dy, dw, dh);
-  return ctx.getImageData(0, 0, w, h);
+  return canvas;
 }

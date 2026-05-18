@@ -96,6 +96,33 @@ display.addEventListener('drop', async (e) => {
 
 async function loadImage(file) {
   stopPlayback();
+  emptyState.hidden = true;
+  generateBtn.disabled = true;
+  downloadBtn.disabled = true;
+
+  if (file.type === 'image/gif' && window.gifuct) {
+    statusLine.textContent = 'PARSING ANIMATED GIF...';
+    progressFill.style.width = '0%';
+    try {
+      const result = await parseAnimatedGif(file);
+      if (result && result.frames.length > 1) {
+        sourceImage = result.frames;
+        const fps = Math.min(30, Math.max(6, 1000 / result.avgDelayMs));
+        startPlayback(previewCanvas, result.frames, fps);
+        generateBtn.disabled = false;
+        statusLine.textContent = `ANIMATED GIF  ${result.width}x${result.height}  ${result.rawFrameCount} frames`;
+        recipeText.textContent = 'none';
+        return;
+      }
+    } catch (e) {
+      console.warn('GIF parse failed, falling back to static', e);
+    }
+  }
+
+  await loadStaticImage(file);
+}
+
+async function loadStaticImage(file) {
   const url = URL.createObjectURL(file);
   const img = new Image();
   try {
@@ -109,14 +136,73 @@ async function loadImage(file) {
     return;
   }
   sourceImage = img;
-
-  emptyState.hidden = true;
   drawSourceToPreview();
   generateBtn.disabled = false;
   downloadBtn.disabled = true;
   statusLine.textContent = `IMAGE LOADED  ${img.naturalWidth}x${img.naturalHeight}`;
   progressFill.style.width = '0%';
   recipeText.textContent = 'none';
+}
+
+async function parseAnimatedGif(file) {
+  const buffer = await file.arrayBuffer();
+  const gif = window.gifuct.parseGIF(buffer);
+  const rawFrames = window.gifuct.decompressFrames(gif, true);
+  if (rawFrames.length === 0) return null;
+
+  const fullCanvas = document.createElement('canvas');
+  fullCanvas.width = gif.lsd.width;
+  fullCanvas.height = gif.lsd.height;
+  const fullCtx = fullCanvas.getContext('2d');
+
+  const patchCanvas = document.createElement('canvas');
+  const composited = [];
+
+  for (const frame of rawFrames) {
+    if (frame.disposalType === 2) {
+      fullCtx.clearRect(frame.dims.left, frame.dims.top, frame.dims.width, frame.dims.height);
+    }
+    patchCanvas.width = frame.dims.width;
+    patchCanvas.height = frame.dims.height;
+    patchCanvas.getContext('2d').putImageData(
+      new ImageData(new Uint8ClampedArray(frame.patch), frame.dims.width, frame.dims.height),
+      0, 0,
+    );
+    fullCtx.drawImage(patchCanvas, frame.dims.left, frame.dims.top);
+    composited.push(coverCropCanvas(fullCanvas, 512, 512));
+  }
+
+  let outFrames = composited;
+  if (composited.length > 60) {
+    const step = composited.length / 60;
+    outFrames = Array.from({ length: 60 }, (_, i) => composited[Math.floor(i * step)]);
+  }
+
+  const avgDelay = rawFrames.reduce((sum, f) => sum + (f.delay || 100), 0) / rawFrames.length;
+
+  return {
+    frames: outFrames,
+    width: gif.lsd.width,
+    height: gif.lsd.height,
+    rawFrameCount: rawFrames.length,
+    avgDelayMs: Math.max(avgDelay, 33),
+  };
+}
+
+function coverCropCanvas(source, w, h) {
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, w, h);
+  const iw = source.width || source.naturalWidth;
+  const ih = source.height || source.naturalHeight;
+  const scale = Math.max(w / iw, h / ih);
+  const dw = iw * scale;
+  const dh = ih * scale;
+  ctx.drawImage(source, (w - dw) / 2, (h - dh) / 2, dw, dh);
+  return canvas;
 }
 
 function drawSourceToPreview() {
