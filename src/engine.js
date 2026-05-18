@@ -1,5 +1,5 @@
 import { createRNG, randomSeed } from './rng.js';
-import { OPERATORS } from './operators/index.js';
+import { OPERATORS as DEFAULT_OPERATORS } from './operators/index.js';
 import { encodeGif } from './gif-encoder.js';
 
 export async function generate(sourceImage, options = {}) {
@@ -11,6 +11,7 @@ export async function generate(sourceImage, options = {}) {
     seed = randomSeed(),
     enabledOperators = null,
     operatorIntensities = null,
+    operators = DEFAULT_OPERATORS,
     onFrame = () => {},
     onStatus = () => {},
     onEncodeProgress = () => {},
@@ -21,9 +22,9 @@ export async function generate(sourceImage, options = {}) {
 
   let pool;
   if (enabledOperators && enabledOperators.length > 0) {
-    pool = OPERATORS.filter((op) => enabledOperators.includes(op.name));
+    pool = operators.filter((op) => enabledOperators.includes(op.name));
   } else {
-    pool = [...OPERATORS];
+    pool = [...operators];
   }
   if (pool.length === 0) throw new Error('No operators enabled');
 
