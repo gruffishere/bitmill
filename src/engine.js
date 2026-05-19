@@ -2,6 +2,60 @@ import { createRNG, randomSeed } from './rng.js';
 import { OPERATORS as DEFAULT_OPERATORS } from './operators/index.js';
 import { encodeGif } from './gif-encoder.js';
 
+function selectOperators(operators, enabledOperators, operatorIntensities, rng) {
+  let pool;
+  if (enabledOperators && enabledOperators.length > 0) {
+    pool = operators.filter((op) => enabledOperators.includes(op.name));
+  } else {
+    pool = [...operators];
+  }
+  if (pool.length === 0) throw new Error('No operators enabled');
+
+  const ordered = [...pool];
+  for (let i = ordered.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
+  }
+
+  return ordered.map((op) => {
+    const params = op.randomParams(rng);
+    const randIntensity = rng();
+    const manual = operatorIntensities ? operatorIntensities[op.name] : undefined;
+    return {
+      name: op.name,
+      apply: op.apply,
+      params,
+      intensity: typeof manual === 'number' ? manual : randIntensity,
+    };
+  });
+}
+
+function buildSourceFrames(sourceImage, width, height) {
+  if (Array.isArray(sourceImage)) return sourceImage;
+  return [drawCoverCropToCanvas(sourceImage, width, height)];
+}
+
+async function applyFrame(sourceFrames, selected, t, width, height, rng, beforeBuffer) {
+  const srcIdx = sourceFrames.length === 1
+    ? 0
+    : Math.min(sourceFrames.length - 1, Math.floor(t * sourceFrames.length));
+  const baseData = sourceFrames[srcIdx].getContext('2d').getImageData(0, 0, width, height);
+  let imageData = new ImageData(new Uint8ClampedArray(baseData.data), width, height);
+
+  for (const op of selected) {
+    beforeBuffer.set(imageData.data);
+    try {
+      imageData = await op.apply(imageData, op.params, t, rng);
+    } catch (e) {
+      console.warn(`Operator ${op.name} failed at t=${t.toFixed(2)}:`, e);
+    }
+    if (op.intensity < 0.99) {
+      blendInPlace(imageData.data, beforeBuffer, op.intensity);
+    }
+  }
+  return imageData;
+}
+
 export async function generate(sourceImage, options = {}) {
   const {
     width = 512,
@@ -19,70 +73,16 @@ export async function generate(sourceImage, options = {}) {
   } = options;
 
   const rng = createRNG(seed);
-
-  let pool;
-  if (enabledOperators && enabledOperators.length > 0) {
-    pool = operators.filter((op) => enabledOperators.includes(op.name));
-  } else {
-    pool = [...operators];
-  }
-  if (pool.length === 0) throw new Error('No operators enabled');
-
-  const ordered = [...pool];
-  for (let i = ordered.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [ordered[i], ordered[j]] = [ordered[j], ordered[i]];
-  }
-
-  const selected = ordered.map((op) => {
-    const params = op.randomParams(rng);
-    const randIntensity = rng();
-    const manual = operatorIntensities ? operatorIntensities[op.name] : undefined;
-    return {
-      name: op.name,
-      apply: op.apply,
-      params,
-      intensity: typeof manual === 'number' ? manual : randIntensity,
-    };
-  });
-
-  let sourceFrames;
-  if (Array.isArray(sourceImage)) {
-    sourceFrames = sourceImage;
-  } else {
-    sourceFrames = [drawCoverCropToCanvas(sourceImage, width, height)];
-  }
-
+  const selected = selectOperators(operators, enabledOperators, operatorIntensities, rng);
+  const sourceFrames = buildSourceFrames(sourceImage, width, height);
   const beforeBuffer = new Uint8ClampedArray(width * height * 4);
-  const frames = [];
 
+  const frames = [];
   for (let f = 0; f < frameCount; f++) {
     const t = frameCount === 1 ? 0.5 : f / (frameCount - 1);
     onStatus(`FRAME ${String(f + 1).padStart(2, '0')}/${frameCount}`);
 
-    const srcIdx = sourceFrames.length === 1
-      ? 0
-      : Math.min(sourceFrames.length - 1, Math.floor(t * sourceFrames.length));
-    const baseCanvas = sourceFrames[srcIdx];
-    const baseData = baseCanvas.getContext('2d').getImageData(0, 0, width, height);
-
-    let imageData = new ImageData(
-      new Uint8ClampedArray(baseData.data),
-      width,
-      height,
-    );
-
-    for (const op of selected) {
-      beforeBuffer.set(imageData.data);
-      try {
-        imageData = await op.apply(imageData, op.params, t, rng);
-      } catch (e) {
-        console.warn(`Operator ${op.name} failed at frame ${f}:`, e);
-      }
-      if (op.intensity < 0.99) {
-        blendInPlace(imageData.data, beforeBuffer, op.intensity);
-      }
-    }
+    const imageData = await applyFrame(sourceFrames, selected, t, width, height, rng, beforeBuffer);
 
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -97,10 +97,7 @@ export async function generate(sourceImage, options = {}) {
   onFramesReady(frames, fps, selected.map((s) => ({ name: s.name, intensity: s.intensity })));
 
   onStatus('ENCODING GIF...');
-  const gifBlob = await encodeGif(frames, {
-    fps, width, height,
-    onProgress: onEncodeProgress,
-  });
+  const gifBlob = await encodeGif(frames, { fps, width, height, onProgress: onEncodeProgress });
 
   return {
     blob: gifBlob,
@@ -109,6 +106,24 @@ export async function generate(sourceImage, options = {}) {
     frames,
     fps,
   };
+}
+
+export async function previewFrame(sourceImage, options = {}) {
+  const {
+    width = 512,
+    height = 512,
+    t = 0.5,
+    seed = 0,
+    enabledOperators = null,
+    operatorIntensities = null,
+    operators = DEFAULT_OPERATORS,
+  } = options;
+
+  const rng = createRNG(seed);
+  const selected = selectOperators(operators, enabledOperators, operatorIntensities, rng);
+  const sourceFrames = buildSourceFrames(sourceImage, width, height);
+  const beforeBuffer = new Uint8ClampedArray(width * height * 4);
+  return await applyFrame(sourceFrames, selected, t, width, height, rng, beforeBuffer);
 }
 
 function blendInPlace(after, before, intensity) {
