@@ -4,11 +4,11 @@ import { startPlayback, stopPlayback } from './playback.js';
 import { parseGIF, decompressFrames } from 'https://esm.sh/gifuct-js@2.1.2';
 
 const ALL_OPS = [
-  'pixel-sort', 'channel-shift', 'bit-crush', 'slit-scan',
-  'jpeg-bomb', 'block-shuffle', 'scan-lines', 'displacement',
-  'echo', 'kaleidoscope', 'noise', 'pixelate',
-  'hue-rotate', 'vhs-tracking', 'sub-region', 'halftone',
-  'barrel', 'edge-outline',
+  'pixel-sort', 'channel-shift', 'bit-crush', 'jpeg-bomb',
+  'block-shuffle', 'displacement', 'noise', 'threshold',
+  'vhs-tracking', 'scratch', 'databend', 'chromatic-aberration',
+  'frame-blend', 'scramble', 'wave-tear', 'rgb-corrupt',
+  'glitch-zoom', 'palette-corrupt',
 ];
 const enabledOps = new Set(ALL_OPS);
 
